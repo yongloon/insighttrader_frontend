@@ -4,36 +4,33 @@ import Dashboard from '../components/Dashboard';
 import DisclaimerBanner from '../components/DisclaimerBanner';
 import { MarketDataResponse, TradeIdea, Alert, AlertCreate } from '../types';
 import { fetchMarketData, fetchTradeIdea, checkActiveAlerts, postAlert, deleteAlertApi } from '../lib/api';
-// Import mock data
-import { mockMarketData, mockTradeIdeaBuy, mockTradeIdeaHold, mockActiveAlerts as initialMockAlerts } from '../lib/mockData'; // Adjust path if needed
+// Mock data imports are no longer strictly needed here for operation, but can be kept for quick switching if desired
+// import { mockMarketData, mockTradeIdeaBuy, mockActiveAlerts as initialMockAlerts } from '../lib/mockData';
 
-// --- SET THIS FLAG TO TRUE TO USE MOCK DATA ---
-const USE_MOCK_DATA = true; // Or manage via an environment variable for more flexibility
-// ----------------------------------------------
+// --- SET THIS FLAG TO FALSE TO USE REAL API DATA ---
+const USE_MOCK_DATA = false; // <<<<<<< CHANGE THIS TO false
+// ---------------------------------------------------
+// OR, for better practice, use an environment variable:
+// const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
 export default function HomePage() {
-  const [marketData, setMarketData] = useState<MarketDataResponse | null>(USE_MOCK_DATA ? mockMarketData : null);
-  const [tradeIdea, setTradeIdea] = useState<TradeIdea | null>(USE_MOCK_DATA ? mockTradeIdeaBuy : null); // Or mockTradeIdeaHold
-  const [activeAlerts, setActiveAlerts] = useState<Alert[]>(USE_MOCK_DATA ? [...initialMockAlerts] : []); // Use a copy for mock
+  const [marketData, setMarketData] = useState<MarketDataResponse | null>(null); // Initialize to null for API
+  const [tradeIdea, setTradeIdea] = useState<TradeIdea | null>(null);            // Initialize to null for API
+  const [activeAlerts, setActiveAlerts] = useState<Alert[]>([]);                 // Initialize empty for API
   const [triggeredAlertMessages, setTriggeredAlertMessages] = useState<string[]>([]);
-  const [loading, setLoading] = useState(!USE_MOCK_DATA); // Don't show loading if using mock data initially
+  const [loading, setLoading] = useState(true); // Start with loading true when using API
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (USE_MOCK_DATA) {
-      // Optionally, simulate some delay or dynamic changes for mock data here if needed
-      // For now, mock data is static once set initially.
-      setMarketData(prev => ({ // Simulate a price update
-        ...mockMarketData,
-        current_price: prev ? prev.current_price + (Math.random() * 100 - 50) : mockMarketData.current_price,
-        price_history: [...(prev?.price_history || mockMarketData.price_history).slice(1), {timestamp: Date.now()/1000, price: (prev ? prev.current_price + (Math.random() * 100 - 50) : mockMarketData.current_price) }]
-      }));
+      // Mock data logic (can be removed or kept for easy switching)
+      // For now, if USE_MOCK_DATA is false, this block is skipped.
+      console.log("Using mock data for fetchData - this should not happen if USE_MOCK_DATA is false.");
       setLoading(false);
-      setError(null);
       return;
     }
 
-    // setLoading(true); // Avoid flicker on refetch
+    // setLoading(true); // Avoid UI flicker on refetch, manage initial load separately
     try {
       const [md, ti] = await Promise.all([
         fetchMarketData(),
@@ -44,46 +41,21 @@ export default function HomePage() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred fetching data');
-      console.error(err);
+      console.error("API Error in fetchData:", err);
     } finally {
-      setLoading(false);
+      // setLoading(false); // Only set loading to false after initial load
     }
-  }, []);
+  }, []); // Removed USE_MOCK_DATA from deps as it's constant within this scope or should be outside
 
   const pollAlerts = useCallback(async () => {
     if (USE_MOCK_DATA) {
-      // Simulate an alert triggering for mock data
-      const currentMockPrice = marketData?.current_price || 0;
-      const newlyTriggeredMessages: string[] = [];
-      const updatedMockAlerts = activeAlerts.filter(alert => {
-        let triggered = false;
-        if (!alert.triggered) {
-            if (alert.direction === 'above' && currentMockPrice > alert.price_level) {
-                triggered = true;
-            } else if (alert.direction === 'below' && currentMockPrice < alert.price_level) {
-                triggered = true;
-            }
-        }
-        if (triggered) {
-            const message = `MOCK ALERT: ${alert.asset} has gone ${alert.direction} ${alert.price_level}!`;
-            newlyTriggeredMessages.push(message);
-            if (typeof window !== "undefined" && Notification.permission === "granted") {
-                new Notification("Mock Trade Alert!", { body: message });
-            }
-            return false; // Remove triggered alert from active list
-        }
-        return true;
-      });
-      if (newlyTriggeredMessages.length > 0) {
-        setTriggeredAlertMessages(prev => [...newlyTriggeredMessages, ...prev.slice(0, 4 - newlyTriggeredMessages.length)]);
-        setActiveAlerts(updatedMockAlerts);
-      }
+      // Mock data logic (can be removed or kept)
+      console.log("Using mock data for pollAlerts - this should not happen if USE_MOCK_DATA is false.");
       return;
     }
 
     try {
         const triggeredBackendAlerts = await checkActiveAlerts();
-        // ... (rest of the API alert logic remains the same) ...
         if (triggeredBackendAlerts.length > 0) {
             const newMessages: string[] = [];
             triggeredBackendAlerts.forEach(alert => {
@@ -99,31 +71,33 @@ export default function HomePage() {
             ));
         }
     } catch (error) {
-        console.error("Failed to check alerts:", error);
+        console.error("API Error in pollAlerts:", error);
+        // Optionally set an error state for alert checking
     }
-  }, [USE_MOCK_DATA, activeAlerts, marketData?.current_price]); // Add dependencies for mock logic
+  }, []); // Removed USE_MOCK_DATA
 
 
   useEffect(() => {
     if (USE_MOCK_DATA) {
-      // Set initial mock data without API calls
-      setMarketData(mockMarketData);
-      setTradeIdea(mockTradeIdeaBuy); // Or mockTradeIdeaHold
-      setActiveAlerts([...initialMockAlerts]);
-      setLoading(false);
+      // Initialize with mock data if flag is true (can be removed or kept)
+      // setMarketData(mockMarketData);
+      // setTradeIdea(mockTradeIdeaBuy);
+      // setActiveAlerts([...initialMockAlerts]);
+      setLoading(false); // No loading needed for mock data
+      console.log("Initializing with MOCK data - this path should be skipped if USE_MOCK_DATA is false.");
     } else {
-      setLoading(true); // For initial load when not using mock
-      fetchData(); // Initial fetch if not using mock data
+      setLoading(true); // Set loading true for initial API fetch
+      fetchData().finally(() => setLoading(false)); // Fetch initial data and then set loading false
     }
 
-    const dataInterval = setInterval(fetchData, USE_MOCK_DATA ? 3000 : 7000); // Shorter interval for mock data updates if desired
-    const alertInterval = setInterval(pollAlerts, USE_MOCK_DATA ? 5000 : 10000);
+    // Set up intervals regardless of mock/real, they will behave based on USE_MOCK_DATA inside their callbacks
+    const dataInterval = setInterval(fetchData, 7000);
+    const alertInterval = setInterval(pollAlerts, 10000);
 
+    // Request notification permission
     if (typeof window !== "undefined" && "Notification" in window) {
         if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-            Notification.requestPermission().then(permission => {
-                // console.log("Notification permission:", permission);
-            });
+            Notification.requestPermission();
         }
     }
 
@@ -131,55 +105,49 @@ export default function HomePage() {
       clearInterval(dataInterval);
       clearInterval(alertInterval);
     };
-  }, [USE_MOCK_DATA, fetchData, pollAlerts]); // Add USE_MOCK_DATA to dependency array
+  }, [fetchData, pollAlerts]); // USE_MOCK_DATA is not needed here if its value doesn't change during component lifecycle
+
 
   const handleSetAlert = async (alertData: AlertCreate) => {
     if (USE_MOCK_DATA) {
-      const newMockAlert: Alert = {
-        ...alertData,
-        id: `mock-${Date.now()}`,
-        asset: 'BTC/USD',
-        triggered: false,
-        created_at: Date.now() / 1000,
-      };
-      setActiveAlerts(prev => [...prev, newMockAlert]);
-      alert(`Mock Alert set for BTC/USD ${alertData.direction} ${alertData.price_level}`);
+      // Mock data logic (can be removed or kept)
+      console.log("Using mock data for handleSetAlert.");
       return;
     }
     try {
         const newAlert = await postAlert(alertData);
-        setActiveAlerts(prev => [...prev, newAlert]);
+        setActiveAlerts(prev => [...prev, newAlert]); // Optimistically add to UI
         alert(`Alert set for BTC/USD ${alertData.direction} ${alertData.price_level}`);
     } catch (error) {
         alert(`Failed to set alert: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error("API Error in handleSetAlert:", error);
         throw error;
     }
   };
 
   const handleDeleteAlert = async (alertId: string) => {
     if (USE_MOCK_DATA) {
-      setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
+      // Mock data logic (can be removed or kept)
+      console.log("Using mock data for handleDeleteAlert.");
       return;
     }
     try {
         await deleteAlertApi(alertId);
-        setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
+        setActiveAlerts(prev => prev.filter(a => a.id !== alertId)); // Optimistically remove
     } catch (error) {
         alert(`Failed to delete alert: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error("API Error in handleDeleteAlert:", error);
         throw error;
     }
   };
 
-  // --- Render logic remains largely the same ---
-  if (loading && !marketData) return <p className="text-center mt-20 text-xl">Loading InsightTrader AI...</p>;
-  // Allow rendering with mock data even if error state was previously set from API attempt
-  if (error && !marketData && !USE_MOCK_DATA) return <p className="text-center mt-20 text-xl text-red-500">Error: {error}</p>;
-
+  if (loading) return <p className="text-center mt-20 text-xl">Loading InsightTrader AI...</p>;
+  if (error && !marketData) return <p className="text-center mt-20 text-xl text-red-500">Error: {error}</p>;
 
   return (
     <>
       <Head>
-        <title>InsightTrader AI (MVP{USE_MOCK_DATA ? " - Mock Data" : ""})</title>
+        <title>InsightTrader AI (MVP)</title> {/* Removed mock data indicator from title */}
         <meta name="description" content="MVP Smart Trading Analyzer for BTC/USD" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -188,7 +156,7 @@ export default function HomePage() {
         <header className="bg-gray-800 text-white p-4 shadow-md">
             <h1 className="text-2xl font-bold text-center">
               InsightTrader AI 
-              <span className="text-sm font-light"> (MVP - BTC/USD {USE_MOCK_DATA ? "Simulated with Mock Frontend Data" : "Simulated via Backend"})</span>
+              <span className="text-sm font-light"> (MVP - BTC/USD Simulated via Backend)</span>
             </h1>
         </header>
 
@@ -206,19 +174,19 @@ export default function HomePage() {
                 </div>
             )}
             
-            {/* Render dashboard if marketData (mock or real) is available */}
             {marketData ? (
                 <Dashboard
-                marketData={marketData}
-                tradeIdea={tradeIdea} // tradeIdea can also be from mock data
-                activeAlerts={activeAlerts}
-                onSetAlert={handleSetAlert}
-                onDeleteAlert={handleDeleteAlert}
+                  marketData={marketData}
+                  tradeIdea={tradeIdea}
+                  activeAlerts={activeAlerts}
+                  onSetAlert={handleSetAlert}
+                  onDeleteAlert={handleDeleteAlert}
                 />
             ) : (
-                 !error && <p className="text-center mt-10 text-lg">Fetching latest market data...</p>
+                 !error && <p className="text-center mt-10 text-lg">Waiting for market data...</p> // Changed message
             )}
-             {error && marketData && !USE_MOCK_DATA && <p className="text-center my-4 text-md text-red-500">Error updating data: {error}. Displaying last known data.</p>}
+            {/* Display error message if data fetch failed but we are not in loading state anymore */}
+            {error && !loading && <p className="text-center my-4 text-md text-red-500">Failed to load data: {error}. Retrying periodically.</p>}
         </main>
 
         <footer className="text-center text-xs text-gray-500 p-4 border-t border-gray-300">
